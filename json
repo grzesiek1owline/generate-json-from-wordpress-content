@@ -1,0 +1,106 @@
+<?php 
+include "wp-load.php";
+
+$miasto = array();
+
+
+function generateJSON($a,$i){
+
+    
+    $slug = $a;
+    $x = $i;
+
+    $tax_query = array(
+        array (
+            'taxonomy' => 'property_city',
+            'field'    => 'slug',
+            'terms'    => $slug,
+            )
+    );
+
+    $oferts_args = array(
+        'post_type' => 'property',
+        'order' => 'DESC',
+        'orderby' => 'rand',
+        'tax_query' => $tax_query
+    );
+
+    $inwestycja = array();
+    $limiter = 0;
+    $args = new WP_Query($oferts_args);
+
+    if ( $args->have_posts() ) : while ( $args->have_posts() ) : $args->the_post(); 
+
+            
+            $IdInwestycji = get_field('id_inwestycji');
+
+            if (in_array($IdInwestycji, $inwestycja)){
+                continue;
+            }
+
+                                        
+
+            if ($limiter === $x){
+                break;
+            }
+            
+            // Dane
+
+                $permalink = get_permalink();
+                $featured_img_url = get_the_post_thumbnail_url(get_the_ID(),'medium_large'); 
+                $ile = get_post_meta( get_the_ID(), 'fave_property_price', true);
+                $rata = Wylicz($ile,30,30); 
+                $tytul = get_the_title();
+                $budynek = get_field('budynek');
+                $prop_id = get_post_meta( get_the_ID(), 'fave_property_id', true );
+                $bedrooms = get_post_meta( get_the_ID(), 'fave_property_bedrooms', true );
+                $size = houzez_property_size('after'); 
+
+                $nieruchomosc = array(
+                    'url' => $permalink,
+                    'thumb' => $featured_img_url,
+                    'rata' => $rata,
+                    'nazwa' => $tytul,
+                    'budynek' => $budynek,
+                    'id' => $prop_id,
+                    'lazienki' => $bedrooms,
+                    'rozmiar' => $size
+                );
+                                            
+
+
+            $inwestycja[] = $IdInwestycji;
+
+            global $miasto;
+
+            $miasto[$slug][$limiter] = $nieruchomosc;
+            $limiter++;
+
+                                        
+
+        endwhile; wp_reset_postdata(); 
+        else: echo '';
+        endif; 
+
+        return true;
+
+}
+
+
+generateJSON('wroclaw',8);
+generateJSON('warszawa',8);
+generateJSON('krakow',8);
+
+print_r($miasto);
+        
+
+$all = json_encode($miasto, JSON_FORCE_OBJECT);        
+
+
+
+//comment these two lines when errors are resolved
+error_reporting(E_ALL);
+ini_set('display_errors',1);
+$file = fopen('content_prop.json','w+');
+fwrite($file, $all);
+fclose($file);exit;
